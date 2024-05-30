@@ -149,7 +149,7 @@ async function run() {
       res.send(result);
     })
 
-    app.patch('/menu/:id',verifyToken, verifyAdmin,  async (req, res) => {
+    app.patch('/menu/:id', verifyToken, verifyAdmin, async (req, res) => {
       const item = req.body;
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
@@ -227,6 +227,31 @@ async function run() {
       }
       const result = await paymentCollection.find(query).toArray();
       res.send(result);
+    })
+
+    // stats
+    app.get('/admin-stats', verifyToken, verifyAdmin, async (req, res) => {
+      const users = await userCollection.countDocuments();
+      const menuItems = await menuCollection.countDocuments();
+      const orders = await paymentCollection.countDocuments();
+
+      // revenue
+      // not best practice
+      // const payments = await paymentCollection.find().toArray();
+      // const revenue = payments.reduce((a, c) => a + c.price, 0);
+
+      const result = await paymentCollection.aggregate([
+        {
+          $group: {
+            _id: null,
+            revenue: { $sum: '$price' }
+          }
+        }
+      ]).toArray();
+
+      const revenue = result.length > 0 ? result[0].revenue : 0;
+
+      res.send({ users, menuItems, orders, revenue })
     })
 
     // Send a ping to confirm a successful connection
